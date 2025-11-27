@@ -1,5 +1,5 @@
 import_code("/bin/custom_libs.gs") // override=/imports/custom_libs.gs
-import_code("/bin/hard_code.gs") // override=/imports/hard_code.gs
+import_code("/bin/hard_code.gs") // override=/really_just_homework/hard_code.gs
 import_code("/bin/custom_programs.gs") // override=/imports/custom_programs.gs
 import_code("/bin/default_programs.gs") // override=/imports/default_programs.gs
 if bio.debug==0 and bio.bypass==0 and bio.demo==1 then
