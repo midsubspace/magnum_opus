@@ -1,5 +1,5 @@
 print "Imported Custom Programs"
-
+//TODO check each function and gut out unneeded code and verify each function works
 cus={}
 cus.programs={}
 cus.local_libs=function(shell=null)//Grabs local libs from a given shell object

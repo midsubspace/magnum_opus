@@ -1,5 +1,5 @@
 print "Imported Default Programs"
-
+//TODO verify that each function works with LCD
 sys={}
 
 sys.aircrack={"name":"aircrack","usage":"[full path to ""file.cap""]]","req":"file"}
