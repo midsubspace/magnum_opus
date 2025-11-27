@@ -1,0 +1,401 @@
+print "Imported Custom Libs"
+cor={}
+//string functions taken from https://github.com/cloverrfoxx/foxlib-gh/blob/main/src/text.src
+string.color = function(hex="#ffffff")
+    return "<"+hex+">"+self+"</color>"
+end function
+string.bold=function()
+    return "<b>"+self+"</b>"
+end function
+string.italic=function()
+    return "<i>"+self+"</i>"
+end function
+string.underline=function()
+    return "<u>"+self+"</u>"
+end function
+string.center=function()
+    return "<align=center>"+self+"</u>"
+end function
+cor.crypto=function()
+    crypto=include_lib("/lib/crypto.so")
+    if typeof(crypto)!="cryptoLib" then
+        print "Crypto.so Not Found".color("#ffff00")
+        bat.run
+    else
+        return(crypto)
+    end if
+end function
+cor.meta=function()
+    meta=include_lib("/lib/metaxploit.so")
+    if typeof(meta)!="MetaxploitLib" then
+        print "Metaxploit.so Not Found".color("#ffff00")
+        bat.run
+    else
+        return(meta)
+    end if
+end function
+cor.apt=function()
+    apt=include_lib("/lib/aptclient.so")
+    if typeof(apt)!="aptclientLib" then
+        print "Aptclient.so Not Found".color("#ffff00")
+        bat.run
+    else
+        return(apt)
+    end if
+end function
+cor.req=function(need=null,object=null)
+    if need=="shell" then
+        if typeof(object)=="shell" then
+            return object
+        else
+            print "Must have Shell Object! ".color(ffff00)+char(10)+"You Have A "+typeof(object).color(ffff00)
+            bat.run
+        end if
+    else if need=="computer" then
+        if typeof(object)=="shell" then
+            object=object.host_computer
+            return object
+        else if typeof(object)=="computer" then
+            return object
+        else if typeof(object)=="file" then
+            print "Must have Computer Object! ".color(ffff00)+char(10)+"You Have A "+typeof(object).color(ffff00)
+            bat.run
+        end if
+    else if need=="file" then
+        if typeof(object)=="shell" then
+            object=object.host_computer.File("/")
+            return object
+        else if typeof(object)=="computer" then
+            object=object.File("/")
+            return object
+        else if object=="file" then
+            while object.name!="/"
+                object=object.parent
+            end while
+            return object
+        else
+            print "Must have File Object! ".color(ffff00)+char(10)+"You Have A "+typeof(object).color(ffff00)
+            bat.run
+        end if
+    else
+        cor.exit_err("COR.REQ FAILED DUMBASS")
+    end if
+end function
+cor.format=function(text, fillLastRow=false)
+    //replace escaped <, >, \, and spaces's so they won't be considered as tags
+    text = text.replace("\\\\",char(20000)).replace("\\<",char(20001)).replace("\\>",char(20002)).replace("\\ ",char(20003)).replace("\\n",char(10))
+    text = text.replace("<b>","<b><mspace=9.9>").replace("</b>","</mspace></b>")
+    origList = text.split(" ")
+    
+    for e in origList
+        if e.indexOf(char(10)) isa number then
+            sp = e.split(char(10))
+            origList[__e_idx] = sp[0]
+            origList.insert(__e_idx+1,[char(10),sp[1]].join(""))
+            __e_idx = __e_idx + 1
+        end if
+    end for
+
+    while true
+        start = text.indexOf("<")
+        if typeof(start) == "null" then break
+        finish = text.indexOf(">",start)
+        if typeof(finish) == "null" then break
+        text = [text[:start], text[finish+1:]].join("")
+    end while
+    
+    text = format_columns(text)
+    lines = text.split(char(10))
+    if fillLastRow then text = [text," "*(lines[0].len-lines[-1].len-1)].join("") // add spaces to the last row
+    newList = text.split(" ")
+
+    i = 0
+    for item in newList
+        if item != "" then
+            newList[__item_idx] = ""
+            while i < origList.len and origList[i] == ""
+                i = i + 1
+            end while
+        else
+            continue
+        end if
+        newList[__item_idx] = origList[i]
+        i = i + 1
+    end for
+
+    return newList.join(" ").replace(char(20000),"\").replace(char(20001),"<").replace(char(20002),">").replace(char(20003)," ")
+end function
+cor.user=function(object=null)
+    if object==null then
+        cor.exit_err("cor.user: Object passed was not a shell,computer,file object")
+    end if
+    if typeof(object)=="shell" then
+        if not object.host_computer.File("/home") then return "guest"
+        if object.host_computer.File("/root").has_permission("w") then return "root"
+        for user in object.host_computer.File("/home").get_folders
+            if user.has_permission("w") and user.name!="guest" then return user.name
+        end for
+        return "guest"
+    else if typeof(object)=="computer" then
+        if not object.File("/home") then return "guest"
+        if object.File("/root").has_permission("w") then return "root"
+        for user in object.File("/home").get_folders
+            if user.has_permission("w") and user.name!="guest" then return user.name
+        end for
+        return "guest"
+    else if typeof(object)=="file" then
+        while object.name!="/"
+            object=object.parent
+        end while
+        for folder in object.get_folders
+            if folder.name=="/root" and folder.has_permission("w") then return "root"
+        end for
+        for folder in object.get_folders
+            if folder.name=="/home" then
+                for user in folder.get_folders
+                    if user.has_permission("w") and user.name!="guest" then return user.name
+                end for
+            end if
+        end for
+        return "guest"
+    end if
+end function
+cor.exit_err=function(message="You Fucked Up",output=null)
+    if output!=null then
+        print message.color("#ffff00")+char(10)+output
+    else
+        print message.color("#ffff00")
+    end if
+    bat.run
+end function
+cor.check_match=function(matches)
+    n=0
+    for m in matches
+        if m.is_folder and m.name=="/" then return matches[0]
+    end for
+    if matches.len>1 then
+        for m in matches
+            if m=="exit" then
+                print n+")"+m
+                continue
+            end if
+            folder=m.is_folder
+            binary=m.is_binary
+            if folder!=0 then
+                folder="Folder"
+            else
+                folder="File"
+            end if
+            if binary!=0 then
+                binary="Binary"
+            else 
+                binary=0
+            end if
+            if binary==0 then
+                print n+")"+m.path+":"+folder
+            else
+                print n+")"+m.path+":"+folder+":"+binary
+            end if
+            n=n+1
+        end for
+        opt=user_input("Pick#").val
+        if matches[opt]=="exit" then return null
+        return matches[opt]
+    else if matches.len==0 then
+        print "No Matches Found!".color("#ffffff")
+        return null
+    else
+        return matches[0]
+    end if
+end function
+cor.find=function(object=null)
+    if typeof(object)!="file" then
+        print "Find: Must pass file object".color("#ffff00")
+        bat.run
+    end if
+    temp={"files":[],"folders":[]}
+    check=function(folder=null)
+        if folder==null then cor.exit_err("Fucked up check object passwed is null")
+        folders=folder.get_folders
+        files=folder.get_files
+        for file in files
+            temp.files.push(file)
+        end for
+        for folder in folders
+            temp.folders.push(folder)
+        end for
+    end function
+    main=function(f)
+        for folder in f.get_folders
+            res=main(folder)
+            check(folder)
+            if res then return res
+        end for
+        return ""
+    end function
+    if object==null then
+        cor.exit_err("find: object passed is null")
+    end if
+    for folder in object.get_folders
+        temp.folders.push(folder)
+    end for
+    temp.folders.push(object)
+    main(object)
+    return temp
+end function
+cor.menu=function(options)
+    n=1
+    print 0+")exit"
+    for option in options
+        print n+")"+option
+        n=n+1
+    end for
+    opt=user_input("Choice> ".color("#ffffff"))
+    if options.indexOf(opt)==null then
+        opt=opt.val
+        if opt==0 then
+            print "Aborted".color("#ffff00")
+            bat.run
+        end if
+        return options[opt-1]
+    else
+        if opt=="exit" then
+            print "Aborted".color("#ffff00")
+            bat.run
+        end if
+        return opt
+    end if
+end function
+cor.convert_time=function(endTime)
+    h = floor(endTime / 3600)
+    m = floor((endTime % 3600) / 60)
+    s = floor(endTime % 60)
+    return {"hour":h,"min":m,"sec":s}
+end function
+cor.get_date=function()
+    return {"month":current_date.split("/")[1],"day":current_date.split("/")[0].val,"year":current_date.split("/")[2].split("-")[0].trim.val,"time":current_date.split("/")[2].split("-")[1].trim}
+end function
+cor.perms=function(perms)
+        if perms==1 then
+        return str(perms).color("#00ED03")
+    else if perms==0 then
+        return str(perms).color("#AA0000")
+    else
+        return str(perms).color("#FFFFFF")
+    end if
+end function
+cor.stopwatch=function(mode="start",msg="")
+    if mode=="start" then
+        bio.startime=time
+    else
+        endtime=cor.convert_time(time-bio.startime)
+        print "It took "+endtime["hour"]+" Hour(s):"+endtime["min"]+" Min(s):"+endtime["sec"]+" Sec(s) "+msg
+    end if
+end function
+cor.watch_proc=function(name="Notepad.exe")
+    computer=cor.req("computer",get_shell)
+    show_procs
+    list=computer.show_procs.split(char(10))[1:]
+    for item in list
+        parsedItem = item.split(" ")
+        if parsedItem[4]==name then return 1
+    end for
+    return 0
+end function
+cor.watch_file=function(path)
+    computer=cor.req("computer",bio.master_shell)
+    if computer.File(path)!=null then 
+        return 1
+    else
+        return 0
+    end if
+end function
+cor.test=function(msg="DEBUG SHIT")
+    if bat.debug!=1 then return
+    print msg
+    user_input("Press Enter To Continue",0,1)
+end function
+cor.objects=function(mode=null,object=null)
+    if object==null then object=bat.cur_obj
+    if ["-a","add"].indexOf(mode)!=null then
+        if typeof(object)=="shell" then
+            for existing_object in bat.object_history
+                if existing_object["type"]=="shell" and cor.user(object)==existing_object["user"] and existing_object["public_ip"]==object.host_computer.public_ip and existing_object["local_ip"]==object.host_computer.local_ip then;print "Object Has Already Been Saved In RAM";return;end if
+            end for
+            bat.object_history.push({"type":"shell","public_ip":object.host_computer.public_ip,"local_ip":object.host_computer.local_ip,"user":cor.user(object),"object":object})
+        else if typeof(object)=="computer" then
+            bat.object_history.push({"type":"computer","public_ip":object.public_ip,"local_ip":object.local_ip,"user":cor.user(object),"object":object})
+        else if typeof(object)=="file" then
+            return null
+        else
+            cor.exit_err("cor.objects mode:add Failed: Invalid Object Type Passed.->"+typeof(object))
+        end if
+        return
+    else if ["-r","remove"].indexOf(mode)!=null then
+        print "Unable to Remove Objects at this time"
+        return
+    else if ["-v","view"].indexOf(mode)!=null then
+        data="TYPE PUB_IP LOC_IP USER"
+        for object in bat.object_history
+            data=data+char(10)+object["type"]+" "+object["public_ip"]+" "+object["local_ip"]+" "+object["user"]
+        end for
+        print cor.format(data)
+    else if ["-s","switch"].indexOf(mode)!=null then
+        type=cor.menu(["shell","computer"])
+        if type=="shell" then
+            shells=[]
+            for object in bat.object_history
+                if object["type"]=="shell" then shells.push(object)
+            end for
+            ips=[]
+            for shell in shells
+                ips.push(shell["public_ip"]+"@"+shell["local_ip"]+"#"+shell["user"])
+            end for
+            choice=cor.menu(ips)
+            choice_public_ip=choice.split("@")[0]
+            choice_local_ip=choice.split("@")[1].split("#")[0]
+            choice_user=choice.split("#")[1]
+            for shell in shells
+                if shell["public_ip"]==choice_public_ip and shell["local_ip"]==choice_local_ip and shell["user"]==choice_user then object=shell
+            end for
+            bat.cur_obj=object["object"]
+            bat.usr=cor.user(bat.cur_obj)
+            if bat.usr=="root" then
+                bat.path="/root"
+            else if bat.usr=="guest" then
+                bat.path="/home/guest"
+            else
+                bat.path="/home/"+bat.usr
+            end if
+            bat.run
+        else if type=="computer" then
+        
+        else
+            cor.exit_err("Currently only stores Shell and Computer Objects")
+        end if
+    else if ["-l","libs"].indexOf(mode)!=null then
+        target=object
+        if typeof(target)=="shell" then
+            shells=[]
+            for object in bat.object_history
+                if object["type"]=="shell" then shells.push(object)
+            end for
+            ips=[]
+            choice=null
+            for shell in shells
+                if choice!=null then continue
+                ips.push(shell["public_ip"]+"@"+shell["local_ip"]+"#"+shell["user"])
+                if target.host_computer.public_ip==shell["public_ip"] and target.host_computer.local_ip==shell["local_ip"] then choice=shell
+            end for
+            return({"crypto":choice["local_crypto"],"meta":choice["local_meta"],"router":choice["local_router"]})
+        else if type=="computer" then
+        
+        else
+            cor.exit_err("Currently only stores Shell and Computer Objects")
+        end if
+    else
+        cor.exit_err("cor.objects: invalid mode passed->"+mode)
+    end if
+    bat.run
+end function
+cor.stop=function(txt="Press Any Key To Continue!");user_input(txt.color("#ffffff"),0,1);end function

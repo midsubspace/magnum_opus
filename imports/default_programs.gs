@@ -1,0 +1,1490 @@
+print "Imported Default Programs"
+
+sys={}
+
+sys.aircrack={"name":"aircrack","usage":"[full path to ""file.cap""]]","req":"file"}
+sys.aircrack.run=function(params)
+    crypto=cor.crypto
+    if params.len!=1 then
+        sys.man.run(["aircrack"])
+    end if
+    file=bat.cur_obj.host_computer.File(params[0])
+    if ((not file) or (not file.is_binary or not file.has_permission("r"))) then ;print "Aircrack: Can't Process File:"+params[0]+":"+typeof(file);bat.run;end if
+    key=crypto.aircrack(file.path)
+    if typeof(key)=="string" then
+        print "Found Key:"+ key
+        bat.run
+    else
+        print "Aircrack: Unable to get key"
+        print typeof(key)
+        print key
+        bat.run
+    end if
+end function
+sys.aireplay={"name":"aireplay","usage":"-b ""bssid"" -e ""essid"" [opt -p ""power""]","req":"file"}
+sys.aireplay.run=function(params)
+    if params.len!=4 and params.len!=6 then sys.man.run(["aireplay"])
+    crypto=cor.crypto
+    bssid=params[1]
+    essid=params[3]
+    power=null
+    if params.len>4 then power=params[5]
+    if power!=null then 
+        potentialAcks = 300000 / (power.to_int + 15)
+        result=crypto.aireplay(params[1],params[3],potentialAcks)
+    else
+        result=crypto.aireplay(params[1],params[3])
+    end if
+    if typeof(result=="string") and result!=null then 
+        print "Aireplay: "+result
+        bat.run
+    else
+        print "Captured Packets Can Now Do Aircrack"
+        bat.run
+    end if
+end function
+sys.airmon={"name":"airmon","usage":"[start:stop] [net interface]","req":"XXX"}
+sys.airmon.run=function(params)
+    cryptools = cor.crypto
+    if not cryptools then ;print("Error: Missing crypto library");bat.run;end if
+    if params.len > 0 and (params.len != 2 or params[0] == "-h" or params[0] == "--help") then sys.man.run(["airmon"])
+    computer = cor.req("computer",bat.cur_obj)
+    formatOutput = "Interface Chipset Monitor_Mode\n"
+    if params.len == 0 then	;print(format_columns(formatOutput + computer.network_devices));bat.run;end if
+    option = params[0]
+    device = params[1]
+    if option != "start" and option != "stop" then sys.man.run(["airmon"])
+    output = cryptools.airmon(option, device)
+    if not output then print("airmon: " + device + " not found")
+    if typeof(output) == "string" then print(output)
+    print(format_columns(formatOutput + computer.network_devices))
+    bat.run
+end function
+sys["apt-get"]={"name":"apt-get","usage":"apt-get install [program_name]".bold+char(10)+"Usage: apt-get search [program_name]".bold+char(10)+"Usage: apt-get show [repo_address]".bold+char(10)+"Usage: apt-get addrepo [repo_address]".bold+char(10)+"Usage: apt-get delrepo [repo_address]".bold+char(10)+"Usage: apt-get update".bold+char(10)+"Usage: apt-get upgrade".bold,"req":"XXX"}
+sys["apt-get"].run=function(params) //TODO Needs Testing
+    aptclient=cor.apt
+    bat.run
+    PendingUpdates=function(folderPath)
+        pendingUpdate=[]
+        targetFolder=bat.cur_obj.File(folderPath)
+        if targetFolder!=null then
+            files=targetFolder.get_files
+            for itemFile in files
+                output=aptclient.check_upgrade(itemFile.path)
+                if output==true then pendingUpdate.push(itemFile.name)
+            end for
+        end if
+        return pendingUpdate
+    end function
+    action=params[0]
+    if action=="update" then
+        print "Updaing package lists..."
+        output=aptclient.update
+        if output then print output
+        bat.run
+    else if action=="install" then
+        print "Reading package lists..."
+        if params.len<2 then;sys.man.run(["apt-get"]);A.bat.run;end if
+        print "Downloading "+params[1]
+        customPath=""
+        if params.len==3 then customPath=params[2]
+        output=aptclient.install(params[1],customPath)
+        if output==true then ;print params[1]+" installed";A.bat.run;end if
+        print output
+        bat.run
+    else if action=="search" then
+        print aptclient.search(params[1])
+        bat.run
+    else if action=="show" then
+        if params.len!=2 then;sys.man.run(["apt-get"]);A.bat.run;end if
+        print aptclient.show(params[1])
+        bat.run
+    else if action=="addrepo" then
+        if params.len<2 or params.len>3 then ;sys.man.run(["apt-get"]);A.bat.run;end if
+        port=1542
+        if params.len==3 then port=params[2]
+        output=aptclient.add_repo(params[1],port)
+        if output then;print output;sys.man.run(["apt-get"]);A.bat.run;end if
+        print "Repo "+params[1]+" added succesfully. "+char(10) +"Launch apt-get with the update option to apply the changes"
+        bat.run
+    else if action=="delrepo" then
+        if params.len!=2 then;sys.man.run(["apt-get"]);A.bat.run;end if
+        output=aptclient.del_repo(params[1])
+        if output then;print output;sys.man.run(["apt-get"]);A.bat.run;end if
+        print "Repo "+params[1]+" removed succesfully"+char(10)+"Launch apt-get with the update option to apply the changes"
+        bat.run
+    else if action=="upgrade" then
+        if params.len==1 then
+            pendingpackages= PendingUpdates("/lib")+PendingUpdating("/bin")
+            if pendingpackages.len==0 then;print "No updated needed";sys.man.run(["apt-get"]);A.bat.run;end if
+            print "The following packages will be updated:"
+            pkgs=" "
+            for itemPackage in pendingpackages
+                pkgs=pkgs+" "+itemPackage
+            end for
+            print pkgs
+            option=user_input(char(10)+"Do you want to contine? (y/s): ",bio.demo)
+            if option=="y" or option=="yes" then
+                counter=0
+                for itemPackage in pendingpackages
+                    output=aptclient.install(itemPackage)
+                    if output==true then
+                        counter=counter+1
+                    else if output then
+                        print output
+                    end if
+                end for
+                print counter+" packages updated"
+            else
+                print "aborted";sys.man.run(["apt-get"]);A.bat.run
+            end if
+            bat.run
+        else if params.len == 2 then
+            output = aptclient.check_upgrade("/lib/" + params[1])
+            if typeof(output) == "string" then output = aptclient.check_upgrade("/bin/" + params[1])
+            if not output then print("No updates needed");sys.man.run(["apt-get"]);A.bat.run;end if
+            if output == true then
+                print("The following package will be updated:"+char(10) + params[1])
+                option = user_input(char(10)+"Do you want to continue?(y/n): ",bio.demo)
+                if option == "y" or option == "yes" then
+                    output = aptclient.install(params[1])
+                    if output == true then ;print (params[1] + " installed.");sys.man.run(["apt-get"]);A.bat.run;end if
+                    print(output)				
+                else 
+                    print("aborted");sys.man.run(["apt-get"]);A.bat.run
+                end if
+            else
+                print output;sys.man.run(["apt-get"]);A.bat.run
+        end if
+    else
+        sys.man.run(["apt-get"])
+    end if
+    bat.run
+end function
+sys.build={"name":"build","usage":"[file_source_code] [path_new_program]","req":"shell"}
+sys.build.run=function(params)
+    if params.len != 2 then
+        sys.man.run(["build"])
+    else
+        pathSource = params[0]
+        programPath = params[1]
+        shell=cor.req("shell",bat.cur_obj)
+        computer = shell.host_computer
+        fileSource = computer.File(pathSource)
+        folderDest = computer.File(programPath)
+
+        if fileSource == null then ;print ("build: can't find "+ pathSource).color("#ffff00");sys.man.run(["build"]);A.bat.run;end if
+        if folderDest == null then ;print ("build: can't find " + programPath).color("#ffff00");sys.man.run(["build"]);A.bat.run;end if
+        
+        output = shell.build(fileSource.path, folderDest.path)
+        if output.len == 0 then
+            print("build successful.")
+        else
+            print(output)
+        end if
+    end if
+end function
+sys.cat={"name":"cat","usage":"[file]","req":"computer"}
+sys.cat.run=function(params)
+    if params.len != 1 or params[0] == "-h" or params[0] == "--help" then ;sys.man.run(["cat"]);A.bat.run;end if
+    pathFile = params[0]
+    object = cor.req("file",bat.cur_obj)
+    temp=cor.find(object)
+    matches=[]
+    for file in temp.files
+        if file.name.lower==pathFile.lower and not file.is_binary and not file.is_folder then
+            matches.push(file)
+        end if 
+    end for
+    file=cor.check_match(matches)
+    if file ==null then file=cor.req("computer",bat.cur_obj).File(bat.path+"/"+pathFile)
+    if file == null then ;print("cat: file not found: "+pathFile);bat.run;end if
+    if file.is_binary then ;print("cat: can't open " + file.path + ". Binary file");bat.run;end if
+    if not file.has_permission("r") then ;print("cat: permission denied");bat.run;end if
+    print(file.get_content)
+    bat.run
+end function
+sys.cd={"name":"cd","usage":"XXX","req":"XXX"}
+sys.cd.run=function(params)
+    object=cor.req("file",bat.cur_obj)
+    temp=cor.find(object)
+    matches=[]
+    for folder in temp.folders
+        if folder.path==bat.path then matches.push(folder)
+    end for
+    folder=cor.check_match(matches)
+    if folder==null then cor.ext_err("cd: Failed to Locate:",params[0])
+    if params.len==0 then
+        if bat.usr=="root" then
+            bat.path="/root"
+            return
+        else if bat.usr=="guest" then
+            bat.path="/home/guest"
+            return
+        else
+            bat.path="/home/"+bat.usr
+            return
+        end if
+    else
+        if params[0]==".." then
+            if bat.path=="/" then bat.run
+            bat.path=folder.parent.path
+        else
+            new_folder=params[0]
+            if new_folder.split("/").len==1 then
+                matches=[]
+                for folder in temp.folders
+                    if folder.name==new_folder then matches.push(folder)
+                end for
+                folder=cor.check_match(matches)
+                if folder== null then cor.exit_err("cd: Unable to locate ",params[0])
+                bat.path=folder.path
+            else
+                bat.path=new_folder
+                bat.run
+            end if
+        end if
+    end if
+    bat.run
+end function
+sys.chgrp={"name":"chgrp","usage":"[opt:-R] [new group] [path file/folder]","req":"XXX"}
+sys.chgrp.run=function(params)
+    if params.len < 2 or (params.len == 3 and params[0] != "-R") then ; sys.man.run(["chgrp"]);bat.run;end if
+    group = params[0]
+    pathFile = params[1]
+    isRecursive = 0
+    if params.len == 3 then
+        group = params[1]
+        pathFile = params[2]
+        isRecursive = 1
+    end if
+    file = get_shell.host_computer.File(pathFile)
+    if file == null then ;print ("chgrp: file not found: "+pathFile).color("#ffff00");bat.run;end if
+    output = file.set_group(group, isRecursive)
+    if output then print(output)
+    bat.run
+end function
+sys.chmod={"name":"chmod","usage":"[opt:-R] [u,g,o+wrx] [path file/folder]","req":"XXX"}
+sys.chmod.run=function(params)
+    if params.len < 2 or (params.len == 3 and params[0] != "-R") then ;sys.man.run(["chmod"]);bat.run;end if
+    permissions = params[0]
+    pathFile = params[1]
+    isRecursive = 0
+    if params.len == 3 then
+        permissions = params[1]
+        pathFile = params[2]
+        isRecursive = 1
+    end if
+    file = get_shell.host_computer.File(pathFile)
+    if file == null then ;print ("chmod: can't find " + pathFile);bat.run;end if
+    output = file.chmod(permissions, isRecursive)
+    if output then print(output)
+    bat.run
+end function
+sys.chown={"name":"chown","usage":"[opt:-R] [owner] [path file/folder]","req":"XXX"}
+sys.chown.run=function(params)
+    if params.len < 2 or (params.len == 3 and params[0] != "-R") then ;sys.man.run(["chown"]);bat.run;end if
+    owner = params[0]
+    pathFile = params[1]
+    isRecursive = 0
+    if params.len == 3 then
+        owner = params[1]
+        pathFile = params[2]
+        isRecursive = 1
+    end if
+    file = get_shell.host_computer.File(pathFile)
+    if file == null then ;print ("chown: file not found: "+pathFile) ;bat.run;end if
+    output = file.set_owner(owner, isRecursive)
+    if output then print(output)
+    bat.run
+end function
+sys.cp={"name":"cp","usage":"[path to file] [path to copy]","req":"XXX"}
+sys.cp.run=function(params)
+    if params.len != 2 or params[0] == "-h" or params[0] == "--help" then sys.man.run(["cp"])
+    origFile = get_abs_path(params[0])
+    destFolder = get_abs_path(params[1])
+    computer = get_shell.host_computer
+    file = computer.File(origFile)
+    if not file then cor.exit_err("cp: can't find ",origFile)
+    newName = ""
+    folder = computer.File(destFolder)
+    if not folder then
+        //Check if the user wants to put a new name.
+        pathParent = parent_path(destFolder)
+                        
+        if pathParent == destFolder then			
+            newName = destFolder
+            destFolder = file.parent.path		
+            output = file.copy(destFolder, newName)
+            if output and output != 1 then print(output)
+            bat.run
+        end if	
+
+        folder = computer.File(pathParent)
+        newName = destFolder[destFolder.len - (destFolder.len - pathParent.len):-1]			
+        if newName[0] == "/" then
+            newName = newName[1:]
+        end if
+        if not folder then ;print ("cp: can't copy file. " + destFolder + " doesn't exist.");bat.run;end if
+        
+    end if
+    if folder then
+                
+        //Check if is trying to copy the file on itself. Ignored.
+        if file.parent.path != folder.parent.path or file.name != folder.name then
+
+            finalDest = folder.path
+                    
+            if(newName.len == 0) then
+                newName = file.name
+            end if
+
+            if not folder.is_folder then			
+                finalDest = file.parent.path
+                newName = folder.name
+            end if
+
+            output = file.copy(finalDest, newName)
+            if output and output != 1 then print(output)
+
+        end if
+    end if
+    bat.run
+end function
+sys.ftp={"name":"ftp","usage":"[user@password] [ip address]","req":"XXX"}
+sys.ftp.run=function(params)//TODO needs testing
+    CommandLine = function()
+        output = user_input("ftp> ", bio.demo, false, true)
+        if(output.len == 0) then return
+        listCmd = output.trim.split(" ")
+        command = listCmd[0]
+        shellArgs = ""
+        if(listCmd.len > 1) then
+            listCmd.remove(0)
+            shellArgs = listCmd.join
+        end if
+            
+        if(command == "quit") then 
+            globals.connected = false
+            return
+        end if
+        if(command == "clear") then 
+            clear_screen
+        else
+            output = Launch(command, shellArgs)
+            if output and output != 1 then print(output)
+        end if
+    end function
+
+    ParseParams = function(rawParams)
+        tokens = rawParams.split(" ")
+        params = []
+        for t in tokens
+            if t != "" then params.push(t)
+        end for
+        return params
+    end function
+    
+    Launch = function(command, shellArgs)
+        params = ParseParams(shellArgs)
+        if command == "ls" then 
+            LsCommand(params)
+        else if command == "cd" then 
+            CdCommand(params)
+        else if command == "get" then 
+            GetCommand(params)
+        else if command == "put" then 
+            PutCommand(params)
+        else if command == "mkdir" then 
+            MkdirCommand(params)
+        else if command == "rm" then 
+            RmCommand(params)
+        else if command == "pwd" then 
+            PwdCommand()
+        else if command == "cp" then 
+            CpCommand(params)
+        else if command == "mv" then 
+            MvCommand(params)
+        else if command == "help" then 
+            ShowHelp
+        else 
+            print("command not found in ftp.\nType <b>help</b> to access the available ftp commands.")
+        end if
+    end function
+
+    CdCommand = function(params)
+        if params.len > 0 and (params[0] == "-h" or params[0] == "--help") then 
+            print(command_info("cd_usage"))
+            return
+        end if
+        pathFile = ftp_home_dir
+        if(params.len > 0) then
+            pathFile = get_abs_path(params[0], ftp_current_path)
+        end if
+        output = ftp_shell.host_computer.File(pathFile)
+        if output == null then 
+            print "Error: Path not found: " + pathFile
+            return
+        end if
+        if not output.is_folder then
+            print "Error: Not a folder"
+            return
+        end if
+        globals.ftp_current_path = pathFile
+        print("Directory successfully changed.") 
+    end function
+
+    PwdCommand = function()
+        print(ftp_current_path)
+    end function
+
+    CpCommand = function(params)
+        if params.len != 2 or params[0] == "-h" or params[0] == "--help" then 
+            print(command_info("cp_usage"))
+            return
+        end if
+        
+        origFile = get_abs_path(params[0], ftp_current_path)
+        destFolder = get_abs_path(params[1], ftp_current_path)
+        
+        computer = ftp_shell.host_computer
+        file = computer.File(origFile)
+        if not file then 
+            print("cp: can't find " + origFile)
+            return
+        end if
+        
+        newName = ""
+        folder = computer.File(destFolder)
+        if not folder then
+            //Check if the user wants to put a new name.
+            pathParent = parent_path(destFolder)
+                            
+            if pathParent == destFolder then			
+                newName = destFolder
+                destFolder = file.parent.path		
+                output = file.copy(destFolder, newName)
+                if output and output != 1 then print(output)
+                return
+            end if	
+        
+            folder = computer.File(pathParent)
+            newName = destFolder[destFolder.len - (destFolder.len - pathParent.len):]			
+            if newName[0] == "/" then
+                newName = newName[1:]
+            end if
+            if not folder then 
+                print("cp: can't copy file. " + destFolder + " doesn't exist.")
+                return
+            end if
+            
+        end if
+        
+        if folder then
+                    
+            //Check if is trying to copy the file on itself. Ignored.
+            if file.parent.path != folder.parent.path or file.name != folder.name then
+        
+                finalDest = folder.path
+                        
+                if(newName.len == 0) then
+                    newName = file.name
+                end if
+        
+                if not folder.is_folder then			
+                    finalDest = file.parent.path
+                    newName = folder.name
+                end if
+        
+                output = file.copy(finalDest, newName)
+                if output and output != 1 then print(output)
+        
+            end if
+        end if
+    end function
+
+    MvCommand = function(params)
+        if params.len != 2 then
+            print(command_info("mv_usage"))
+        else
+            origFile = get_abs_path(params[0], ftp_current_path)
+            destFolder = get_abs_path(params[1], ftp_current_path)
+        
+            computer = ftp_shell.host_computer
+            file = computer.File(origFile)
+            if file == null then
+                print("mv: can't find " + origFile)
+        
+            else
+                newName = ""
+                folder = computer.File(destFolder)
+                if folder == null then
+                    //Check if the user wants to put a new name.
+                    pathParent = parent_path(destFolder)
+                            
+                    if pathParent == destFolder then			
+                        newName = destFolder
+                        destFolder = file.parent.path		
+                        file.move(destFolder, newName)
+        
+                    else
+        
+                        folder = computer.File(pathParent)
+                        newName = destFolder[destFolder.len - (destFolder.len - pathParent.len):]			
+                        if newName[0] == "/" then
+                            newName = newName[1:]
+                        end if
+                        if folder == null then				
+                            print("mv: can't copy file. " + destFolder + " doesn't exist.")
+                        end if			
+                    end if
+                
+                end if
+        
+                if folder != null then
+                    
+                    //Check if is trying to copy the file on itself. Ignored.
+                    if file.parent.path != folder.parent.path or file.name != folder.name then
+        
+                        finalDest = folder.path
+                        
+                        if(newName.len == 0) then
+                            newName = file.name
+                        end if
+        
+                        if not folder.is_folder then			
+                            finalDest = file.parent.path
+                            newName = folder.name
+                        end if
+        
+                        if file.parent.path == folder.parent.path and newName != file.name then
+                            file.rename(newName)
+                        else
+                            file.move(finalDest, newName)
+                        end if
+                    end if
+                end if
+            end if
+        end if
+    end function
+
+    MkdirCommand = function(params)
+        if params.len != 1 or params[0] == "-h" or params[0] == "--help" then
+            print(command_info("mkdir_usage"))
+        else
+            computer = ftp_shell.host_computer
+            pathFile = params[0]
+            pathParent = parent_path(pathFile)
+            existFile = computer.File(pathFile)
+            
+            if pathParent == pathFile then
+                pathParent = ftp_current_path
+            end if
+        
+            parent = computer.File(get_abs_path(pathParent, ftp_current_path))
+            if parent == null then
+                print("mkdir: " + pathParent + " not found")
+        
+            else if existFile != null then
+                print("mkdir: " + existFile.path + " file exists")
+        
+            else if not parent.has_permission("w") then
+                print("mkdir: permission denied")
+        
+            else
+                arrayPath = pathFile.split("/")
+                output = computer.create_folder(parent.path, arrayPath[arrayPath.len - 1])
+                if output != null and output != 1 then
+                    print(output)
+                end if 
+        
+            end if
+        end if
+    end function
+
+    RmCommand = function(params)
+        if params.len < 1 or params.len > 2 or params[0] == "-h" or params[0] == "--help" then 
+            print(command_info("rm_usage"))
+            return
+        end if
+        
+        pathFile = params[0]
+        isRecursive = 0
+        if params[0] == "-r" then
+            if params.len == 1 then 
+                print(command_info("rm_usage"))
+                return
+            end if
+            isRecursive = 1
+            pathFile = params[1]
+        end if
+        file = ftp_shell.host_computer.File(get_abs_path(pathFile, ftp_current_path))
+            
+        if file == null then 
+            print("rm: file not found: "+pathFile)
+            return
+        end if
+        if not file.has_permission("w") then 
+            print("rm: permission denied")
+            return
+        end if
+        
+        if file.is_folder == 1 and isRecursive == 0 and file.is_symlink == 0 then
+            print("rm: " + file.name + " is a directory")
+        else
+            output = file.delete
+            if output.len > 0 then print(output)
+        end if
+
+    end function
+
+    ValidateLsInput = function(input)
+    return (input == "-la" or input == "-l" or input == "-a")
+    end function 
+    
+    LsParamsValid = function(prms)
+        if prms.len > 3 then return false 
+        for p in prms                               
+            if p.indexOf("-") != null and not ValidateLsInput(p) then return false
+        end for                                     
+        return true                                
+    end function
+    
+    LsCommand = function(params)
+        if not LsParamsValid(params) then
+            print(command_info("ls_usage"))
+            
+        else
+            computer = ftp_shell.host_computer
+            folderPath = ftp_current_path
+            if params and params[params.len - 1].indexOf("-") == null then
+                folderPath = params[params.len - 1]
+            end if
+            folderPath = get_abs_path(folderPath, ftp_current_path)
+            folder = computer.File(folderPath)
+            if folder == null then
+                print("ls: No such file or directory " + folderPath)
+            else
+                if not folder.has_permission("r") then
+                    print("ls: permission denied")
+        
+                else
+                    showHide = 0
+                    if params and params[0].indexOf("a") != null then
+                        showHide = 1
+                    end if
+        
+                    showDetails = 0
+                    if params and params[0].indexOf("l") != null then
+                        showDetails = 1
+                    end if
+        
+                    subFiles = folder.get_folders + folder.get_files
+                    output = ""
+                    for subFile in subFiles
+                        nameFile = subFile.name
+                        permission = subFile.permissions
+                        owner = subFile.owner
+                        size = subFile.size
+                        group = subFile.group
+        
+                        if showHide or nameFile.indexOf(".") != 0 then
+                            if output.len > 0 then 
+                                output = output + "\n"
+                            end if
+                            if showDetails then
+                                output = output + permission + " " + owner + " " + group + " " + size + " 00:00 " + nameFile
+                                if subFile.is_symlink then output = output + "-->" + subFile.path(true)
+                            else
+                                output = output + nameFile
+                            end if
+                        end if
+                    end for
+                    
+                    print(format_columns(output))
+                    
+                end if
+            end if
+        end if
+    end function
+
+    PutCommand = function(params)
+        if params.len != 2 then
+            print(command_info("put_usage"))
+            return
+        end if
+        source = get_abs_path(params[0], current_path)
+        dest = get_abs_path(params[1], ftp_current_path)
+        output = ftp_shell.scp(source, dest, null, true)
+        if output == null then 
+            print("put: there is no active remote connections")
+        else if output != 1 then 
+            print(output)
+        end if
+    end function
+
+    GetCommand = function(params)
+        if params.len != 2 then
+            print(command_info("get_usage"))
+            return
+        end if
+        source = get_abs_path(params[0], ftp_current_path)
+        dest = get_abs_path(params[1], current_path)
+        output = ftp_shell.scp(source, dest, null, false)
+        if output == null then 
+            print("put: there is no active remote connections")
+        else if output != 1 then 
+            print(output)
+        end if
+    end function
+
+    ShowHelp = function()
+        help = "Available commands: 
+        ls <path>        - List files and directories.
+        cd <path>        - Change current directory.
+        pwd              - Show current directory.
+        get <file>       - Download a file from the server.
+        put <file>       - Upload a file to the server.
+        mkdir <dirname>  - Create a new directory.
+        rm <file>        - Delete a file.
+        cp <file>        - Copy a file.
+        mv <file>        - Move a file.
+        quit             - Close the FTP connection.
+                
+    Type the command followed by any required arguments."
+    print(help)
+    end function
+
+    //Main
+    if params.len < 2 or params.len > 3 then ;sys.man.run(["ftp"]);bat.run;end if
+    credentials = params[0].split("@")
+    user = credentials[0]
+    password = credentials[1]
+    connected = true
+    port = 21
+    if params.len == 3 then port = params[2].to_int
+    if typeof(port) != "number" then cor.exit_err("Invalid port: ",port)
+    print("Connecting...")
+    ftp_current_path = ""
+    ftp_home_dir = ""
+    ftp_shell = get_shell.connect_service(params[1], port, user, password, "ftp")
+    if typeof(ftp_shell) == "string" then cor.exit_err("ftp: ",ftp_shell)
+    if ftp_shell then
+        ftp_current_path = "/root"
+        if user != "root" then ftp_current_path = "/home/" + user
+        ftp_home_dir = ftp_current_path    
+        while connected
+            CommandLine
+        end while
+    else 
+        print("connection failed")
+    end if
+    bat.run
+end function
+sys.groupadd={"name":"groupadd","usage":"[user] [new group]","req":"XXX"}
+sys.groupadd.run=function(params)
+    user=params[0]
+    group=params[1]
+    computer=cor.req("computer",bat.cur_obj)
+    output=computer.create_group(user,group)
+    if output== true then print "Group "+ group+" added to user "+user.color("#ffffff")
+    if output then ;print "groupadd: "+output.color("#ffff00");bat.run;end if
+end function
+sys.groupdel={"name":"groupdel","usage":"[user] [group]","req":"XXX"}
+sys.groupdel.run=function(params)
+    user=params[0]
+    group=params[1]
+    computer=cor.req("computer",bat.cur_obj)
+    output=computer.delete_group(user,group)
+    if output== true then print "Group "+ group+" deleted from user "+user.color("#ffffff")
+    if output then ;print "groupdel: "+output.color("#ffff00");bat.run;end if
+end function
+sys.groups={"name":"groups","usage":"[username]","req":"XXX"}
+sys.groups.run=function(params)
+    user=params[0]
+    computer=cor.req("computer",bat.cur_obj)
+    output=computer.groups(user)
+    print output
+end function
+sys.ifconfig={"name":"ifconfig","usage":"[net interface] [ip address] gateway [ip address]","req":"XXX"}
+sys.ifconfig.run=function(params)
+    computer = cor.req("computer",bat.cur_obj)
+    if (params.len == 0) then
+        router = get_router(computer.public_ip)
+        if computer.is_network_active then
+            if bio.demo==1 then
+                lip="192.168.1."+str(floor(rnd*20))
+                pip=cus.programs.ip.run(["gen"])
+                gw="192.168.1.1"
+                if computer.active_net_card == "WIFI" then   
+                    output = char(10)+"Connected to Wi-Fi:"+char(10)+"Essid: Toys_YNQN"+char(10)+"Bssid: 92:C5:46:T3:0A:D3"
+                else
+                    output = char(10)+"Ethernet connection:"    
+                end if
+            else
+                lip = computer.local_ip
+                pip = computer.public_ip
+                gw = computer.network_gateway
+                if computer.active_net_card == "WIFI" then
+                    if router.local_ip != gw then
+                        router = get_router(gw)
+                    end if		    
+                    output = char(10)+"Connected to Wi-Fi:"+char(10)+"Essid: " + router.essid_name +char(10)+"Bssid: " + router.bssid_name
+                else
+                    output = char(10)+"Ethernet connection:"    
+                end if
+            end if
+        else
+            lip = "0.0.0.0"
+            pip = "0.0.0.0"
+            gw = "0.0.0.0"
+            output = char(10)+"Not connected to the network."
+        end if
+        print( output + char(10)+"----------------"+char(10)+"Public IP: " + pip + char(10)+"Local IP: " + lip + char(10)+"Gateway: " + gw + char(10))
+    else 
+        if params[2] != "gateway" then ;print(sys.ifconfig.usage);bat.run;end if
+        device = params[0]
+        address = params[1]
+        gateway = params[3]
+        if not is_valid_ip(address) then ;print("ifconfig: invalid ip address").color("#ffff00");bat.run;end if
+        if not is_valid_ip(gateway) then ;print("ifconfig: invalid gateway").color("#ffff00");bat.run;end if
+        output = computer.connect_ethernet(device, address, gateway)
+        if output.len > 0 then print(output)
+    end if
+end function
+sys.iwconfig={"name":"iwconfig","usage":"Usage:[net device] [bssid] [essid name] [pass key]".bold+char(10)+"Example: iwconfig wlan0 00:11:22:33:44 mynetwork mypass","req":"XXX"}
+sys.iwconfig.run=function(params)
+    if params.len != 4 or params[0] == "-h" or params[0] == "--help" then sys.man.run(["iwconfig"])
+    computer = cor.req("computer",bat.cur_obj)
+    devices = computer.network_devices
+    if devices == null or devices.indexOf(params[0]) == null then ;print("iwconfig: Network device not found");bat.run;end if
+    bssid = params[1]
+    essid = params[2]
+    password = params[3]
+    status = computer.connect_wifi(params[0], bssid, essid, password)
+    if typeof(status) == "string" then print(status)
+end function
+sys.iwlist={"name":"iwlist","usage":"[net device]"+char(10)+"Example: iwlist wlan0","req":"XXX"}
+sys.iwlist.run=function(params)
+    if params.len!=1 then sys.man.run(["iwlist"])
+    computer = cor.req("computer",bat.cur_obj)
+    devices = computer.network_devices
+    if devices == null or devices.indexOf(params[0]) == null then ;print("iwlist: Network device not found");bat.run;end if
+    if params[0].indexOf("eth") != null then ;print("iwlist: ethernet cards not supported for this command");bat.run;end if
+    networks = computer.wifi_networks(params[0])
+    if networks == null then sys.man.run(["iwlist"])
+    info = "BSSID PWR ESSID"
+    for network in networks
+        info = info + char(10) + network
+    end for
+    print(cor.format(info))
+end function
+sys.kill={"name":"kill","usage":"[PID]","req":"XXX"}
+sys.kill.run=function(params)
+    if params.len!=1 then sys.man.run(["kill"])
+    PID = params[0].to_int
+    output = cor.req("computer",bat.cur_obj).close_program(PID)
+    if output==true then 
+        print("Process " + PID + " closed")
+        bat.run
+    else
+        cor.exit_err("kill: Process " + PID + " not found",output)
+    end if
+end function
+sys.ln={"name":"ln","usage":"[path file] [path to link]","req":"XXX"}
+sys.ln.run=function(params)
+    if params.len > 0 and params[0] == "-s" then
+        params = params[1:]
+    end if
+    if params.len != 2 or params[0] == "-h" or params[0] == "--help" then sys.man.run(["ln"])
+
+    pathFile = get_abs_path(params[0])
+    pathLink = get_abs_path(params[1])
+    pathParent = parent_path(pathLink)
+    if pathParent == pathLink then
+        pathParent = current_path
+    end if
+
+    file = get_shell.host_computer.File(pathFile)
+        
+    if file == null then cor.exit_err("ln: file not found: ",pathFile)
+    if not file.has_permission("w") then cor.exit_err("ln: permission denied")
+
+    arrayPath = pathLink.split("/")
+    newName = arrayPath[arrayPath.len-1]
+    output = file.symlink(pathParent, newName)
+    if output and output != 1 then print(output)
+end function
+sys.ls={"name":"ls","usage":"[opt:-l, -a, -la] [opt: path]","req":"XXX"}
+sys.ls.run=function(params)
+    object=cor.req("file",bat.cur_obj)
+    if params.len!=1 then params.push(bat.path)
+    folderPath=params[0]
+    temp=cor.find(object)
+    matches=[]
+    for folder in temp.folders
+        if folder.name==folderPath then matches.push(folder)
+        if folder.path==folderPath then matches.push(folder)
+    end for
+    folder=cor.check_match(matches)
+    if folder==null then cor.exit_err("ls: unable to core.find ",folderPath)
+    showHide=1
+    showDetails=1
+    subFiles=folder.get_folders+folder.get_files
+    output="<u>Path R:W:X Owner Group Size</u>".color("#FFFFFF")
+    for subFile in subFiles
+        pathFile=subFile.path
+        nameFile=subFile.name
+        permission=subFile.permissions
+        readFile=cor.perms(subFile.has_permission("r"))
+        writeFile=cor.perms(subFile.has_permission("w"))
+        runFile=cor.perms(subFile.has_permission("x"))
+        owner=subFile.owner
+        size=subFile.size
+        group=subFile.group
+        output = output+char(10)+subFile.path+" "+readFile+":"+writeFile+":"+runFile+" "+owner+" "+group+" "+size
+    end for
+    if output=="<u>Path R:W:X Owner Group Size</u>" then cor.exit_err("ls: Folder->"+folder.path+" is empty")
+    print "Scanning:"+params[0]
+    print cor.format(output)
+end function
+sys.man={"name":"man","usage":"[command]","req":"XXX"}
+sys.man.run=function(params)
+    if params.len!=1 then sys.man.run(["man"])
+    for app in sys
+        if params[0]==app["key"] then
+            print "Usage".bold+": "+sys[params[0]].name.bold+" "+sys[params[0]].usage.bold
+            bat.run
+        end if
+    end for
+    for app in cus.programs
+        if params[0]==app["key"] then 
+            print "Usage".bold+": "+cus.programs[params[0]].name.bold+" "+cus.programs[params[0]].usage.bold
+            bat.run
+        end if
+    end for
+    print "man: manual entry for "+params[0]+" not found"
+    bat.run
+end function
+sys.mkdir={"name":"mkdir","usage":"[path to new folder]","req":"XXX"}
+sys.mkdir.run=function(params)
+    if params.len != 1 or params[0] == "-h" or params[0] == "--help" then
+        sys.man.run(["mkdir"])
+    else
+        computer = cor.req("computer",bat.cur_obj)
+        pathFile = get_abs_path(params[0])
+        pathParent = parent_path(pathFile)
+        existFile = computer.File(pathFile)
+        if pathParent == pathFile then
+            pathParent = current_path
+        end if
+        parent = computer.File(pathParent)
+        if parent == null then
+            cor.exit_err("mkdir: " + pathParent + " not found")
+        else if existFile != null then
+            cor.exit_err("mkdir: " + existFile.path + " file exists")
+        else if not parent.has_permission("w") then
+            cor.exit_err("mkdir: permission denied")
+        else
+            arrayPath = pathFile.split("/")
+            output = computer.create_folder(parent.path, arrayPath[arrayPath.len - 1])
+            if output != null and output != 1 then
+                print(output)
+            end if 
+        end if
+    end if
+    bat.run
+end function
+sys.mv={"name":"mv","usage":"[path to file] [path to new folder]","req":"XXX"}
+sys.mv.run=function(params)//TODO Add in custom stuff to allow mving files no mater of current path
+    Basename = function(p)
+        if p == "/" then return "/"
+        if p.len > 1 and p[p.len-1:p.len] == "/" then
+            p = p[0:p.len-1] 
+        end if
+        parts = p.split("/")
+        return parts[parts.len-1]
+    end function
+    if params.len != 2 then
+        sys.man.run(["mv"])
+    else
+        origFile = get_abs_path(params[0])
+        destFolder = get_abs_path(params[1])
+        computer = get_shell.host_computer
+        file = computer.File(origFile)
+        if file == null then
+            cor.exit_err("mv: can't find ",origFile)
+        else
+            newName = ""
+            folder = computer.File(destFolder)
+            if folder == null then
+                pathParent = parent_path(destFolder)
+                if pathParent == destFolder then			
+                    newName = destFolder
+                    destFolder = file.parent.path		
+                    file.move(destFolder, newName)
+                else
+                    folder = computer.File(pathParent)
+                    newName = Basename(destFolder)
+                    if folder == null then				
+                        cor.exit_err("mv: can't copy file. " + destFolder + " doesn't exist.")
+                    end if			
+                end if
+            end if
+            if folder != null then
+                if folder.parent != null and file.parent.path == folder.parent.path and file.name == folder.name then cor.exit_err("mv: Error 4862")
+                finalDest = folder.path
+                if(newName.len == 0) then
+                    newName = file.name
+                end if
+                if not folder.is_folder then			
+                    finalDest = file.parent.path
+                    newName = folder.name
+                end if
+                fileParentPath = "none"
+                folderParentPath = "none"
+                if file.parent != null then fileParentPath = file.parent.path
+                if folder.parent != null then folderParentPath = folder.parent.path
+                if fileParentPath == folderParentPath and finalDest == folderParentPath and newName != file.name then
+                    output = file.rename(newName)
+                    if output and output != 1 then print(output)
+                else
+                    output = file.move(finalDest, newName)
+                    if output and output != 1 then print(output)
+                end if
+            end if
+        end if
+    end if
+end function
+sys.nslookup={"name":"nslookup","usage":"[web address]","req":"XXX"}
+sys.nslookup.run=function(params)
+	print("Address: "+nslookup(params[0]))
+end function
+sys.passwd={"name":"passwd","usage":"[username]","req":"XXX"}
+sys.passwd.run=function(params)
+    if params.len!=1 then sys.man.run(["passwd"])
+    inputMsg = "Changing password for user " + params[0] +char(10)+"New Password:"
+    inputPass = user_input(inputMsg, bio.demo)
+    verifyPass=user_input("Confirm New Password:",bio.demo)
+    if inputPass!=verifyPass then cor.exit_err("passwd: Passwords Do Not Match!")
+    output = cor.req("computer",bat.cur_obj).change_password(params[0], inputPass)
+    if output == true then 
+        print("password for user "+params[0]+" modified OK")
+        bat.run
+    end if
+    if output then 
+        cor.exit_err("passwd: password not modified",output)
+    end if
+end function
+sys.ping={"name":"ping","usage":"[ip address]","req":"XXX"}
+sys.ping.run=function(params)
+    result = cor.req("shell",bat.cur_obj).ping(params[0])
+    if result then
+        if typeof(result) == "string" then
+            print(result) 
+        else
+            print("Ping successful")
+        end if
+    else
+        cor.exit_err("ping: IP Address "+params[0]+" unreachable")
+    end if
+end function
+sys.ps={"name":"ps","usage":"","req":"XXX"}
+sys.ps.run=function(params)
+    print cor.format(cor.req("computer",bat.cur_obj).show_procs)
+end function
+sys.pwd={"name":"pwd","usage":"","req":"XXX"}
+sys.pwd.run=function(params)
+    print bat.path
+end function
+sys.reboot={"name":"reboot","usage":"[-sm]","req":"XXX"}
+sys.reboot.run=function(params)
+    if params.len > 0 and (params[0] == "-h" or params[0] == "-help") then ;sys.man.run(["reboot"]);bat.run;end if
+    isSafeMode = params.len > 0 and params[0] == "-sm"
+    output = cor.req("computer",bat.cur_obj).reboot(isSafeMode)
+    verify=user_input("You are about to reboot "+cor.req("computer",bat.cur_obj).public_ip+"@"+cor.req("computer",bat.cur_obj).local_ip+char(10)+"Confirm: y/n >",bio.demo).lower
+    if output and output != 1 then 
+        print(output)
+    else if verify=="y" then
+        print("Closing programs...\nRestarting...")
+    else
+        cor.exit_err("Abort Restart...")
+    end if
+end function
+sys.rm={"name":"rm","usage":"[file]","req":"XXX"}
+sys.rm.run=function(params)
+    if params.len < 1 or params.len > 2 or params[0] == "-h" or params[0] == "--help" then sys.man.run(["rm"])
+    pathFile = params[0]
+    temp=cor.find(cor.req("file",bat.cur_obj))
+    matches=[]
+    for file in temp.files
+        if file.name.lower==pathFile.lower then matches.push(file)
+    end for
+    for folder in temp.folders
+        if folder.name.lower==pathFile.lower then matches.push(folder)
+    end for
+    file=cor.check_match(matches)
+    isRecursive = 0
+    if params[0] == "-r" then
+        if params.len == 1 then sys.man.run(["rm"])
+        isRecursive = 1
+        pathFile = params[1]
+    end if
+    file = cor.req("computer",bat.cur_obj).File(pathFile)
+    if file == null then cor.exit_err("rm: file not found: ",pathFile)
+    if not file.has_permission("w") then cor.exit_err("rm: permission denied")
+    if file.is_folder == 1 and isRecursive == 0 and file.is_symlink == 0 then
+        cor.exit_err("rm: " + file.name + " is a directory")
+    else
+        output = file.delete
+        if output.len > 0 then print(output)
+    end if
+    bat.run
+end function
+sys.rmdir={"name":"rmdir","usage":"rmdir [empty folder]","req":"XXX"}
+sys.rmdir.run=function(params)
+    if params.len < 1 or params.len > 2 or params[0] == "help" then sys.man.run(["rmdir"])
+    path = get_abs_path(params[0])
+    f = cor.req("computer",bat.cur_obj).File(path)
+    if typeof(f) != "file" then cor.exit_err("rmdir: failed to remove '" + path + "' no such file or directory")
+    if f.is_folder == 0 then cor.exit_err("rmdir: " + f.name + " is not a directory.")
+    if f.get_files.len >= 1 or f.get_folders.len >= 1 then cor.exit_err("rmdir: failed to remove '" + path + "' directory not empty")
+    fd = f.delete
+    if fd.trim.len == 0 then bat.run
+    cor.exit_err("rmdir: failed to remove '" + path + "': " + fd.trim)
+end function
+sys.scp={"name":"scp","usage":"-d [path to source file/folder] [path to destination file/folder] or -u [path to source file/folder] [path to destination file/folder]","req":"XXX"}
+sys.scp.run=function(params)//TODO Needs Other things first
+end function
+sys.ssh={"name":"ssh","usage":"[user@password] [ip address] [(opt) port]","req":"XXX"}
+sys.ssh.run=function(params)
+    if params.len!=2 then sys.man.run(["ssh"])
+    creds=params[0]
+    ip=params[1]
+    port=22
+    if params.len==3 then port=params[2].to_int
+    user=creds.split("@")[0]
+    pass=creds.split("@")[1]
+    shell=get_shell.connect_service(ip,port,user,pass,"ssh")//TODO Change get_shell to fake ip from botnet
+    if typeof(shell)=="shell" then
+        bat.cur_obj=shell
+        cor.objects("add",bat.cur_obj)
+        bat.usr=cor.user(bat.cur_obj)
+        if bat.usr=="root" then
+            bat.path="/root"
+        else if bat.usr=="guest" then
+            bat.path="/home/guest"
+        else
+            bat.path="/home/"+bat.usr
+        end if
+        bat.run
+    else
+        cor.exit_err("ssh: Error Getting Shell ",shell)
+    end if
+end function
+sys.sudo={"name":"sudo","usage":"[opt:-s] [command] or -u [username]","req":"XXX"}
+sys.sudo.run=function(params)
+    object=cor.req("shell",bat.cur_obj)
+    cus.local_libs(object)
+    if cus.dropzone==null then cor.exit_err("sudo: ERROR With dropzone")
+    computer=object.host_computer
+    if params[0] == "-u" and params.len != 2 then sys.man.run(["sudo"])
+    if params[0].trim=="-u" then
+        if computer.File(cus.dropzone.path).has_permission("w") then
+            cus.payloads("create")
+            bat_file=cus.bat_file
+            file=bat_file.set_content("user=get_custom_object[""sudo_user""]"+char(10)+"password=get_custom_object[""sudo_password""]"+char(10)+"shell=get_shell(user,password)"+char(10)+"if typeof(shell)==""shell"" then"+char(10)+"get_custom_object[""sudo_shell""]=shell"+char(10)+"else"+char(10)+"get_custom_object[""sudo_shell""]=null"+char(10)+"end if")
+            buildResult = object.build(cus.dropzone.path+"/"+cus.payload_name+".src",cus.dropzone.path)
+            get_custom_object["sudo_user"]=params[1]
+            get_custom_object["sudo_password"]=user_input("Password: ",bio.demo)
+            if get_custom_object["sudo_password"]=="" then cor.exit_err("sudo: no password provided!")
+            object.launch(cus.dropzone.path+"/"+cus.payload_name)
+            if get_custom_object["sudo_shell"]!=null then 
+                bat.cur_obj=get_custom_object["sudo_shell"]
+                cor.objects("add",bat.cur_obj)
+                bat.usr=cor.user(bat.cur_obj)
+                if bat.usr=="root" then
+                    bat.path="/root"
+                else if bat.usr=="guest" then
+                    bat.path="/home/guest"
+                else
+                    bat.path="/home/"+bat.usr
+                end if
+                bat.run
+            else
+                cor.exit_err("sudo: incorrect username or password")
+            end if
+        else
+            bat.run
+        end if
+    else
+        if computer.File(cus.dropzone.path).has_permission("w") then
+            cus.payloads("create")
+            bat_file=cus.bat_file
+            file=bat_file.set_content("user=get_custom_object[""sudo_user""]"+char(10)+"password=get_custom_object[""sudo_password""]"+char(10)+"shell=get_shell(user,password)"+char(10)+"if typeof(shell)==""shell"" then"+char(10)+"get_custom_object[""sudo_shell""]=shell"+char(10)+"else"+char(10)+"get_custom_object[""sudo_shell""]=null"+char(10)+"end if")
+            buildResult = object.build(cus.dropzone.path+"/"+cus.payload_name+".src",cus.dropzone.path)
+            get_custom_object["sudo_user"]="root"
+            get_custom_object["sudo_password"]=user_input("Password: ",bio.demo)
+            if get_custom_object["sudo_password"]=="" then cor.exit_err("sudo: no password provided!")
+            object.launch(cus.dropzone.path+"/"+cus.payload_name)
+            if get_custom_object["sudo_shell"]!=null then 
+                bat.cur_obj=get_custom_object["sudo_shell"]
+                cor.objects("add",bat.cur_obj)
+                bat.usr=cor.user(bat.cur_obj)
+                if bat.usr=="root" then
+                    bat.path="/root"
+                else if bat.usr=="guest" then
+                    bat.path="/home/guest"
+                else
+                    bat.path="/home/"+bat.usr
+                end if
+                bat.run
+            else
+                exit_err("sudo: incorrect password")
+            end if
+        end if
+    end if
+end function
+sys.touch={"name":"touch","usage":"[path_new_file]","req":"XXX"}
+sys.touch.run=function(params)
+    pathFile = params[0]
+    pathParent = parent_path(pathFile)
+    computer = cor.req("computer",bat.cur_obj)
+    if pathParent == pathFile then
+        pathParent = bat.path
+    end if
+    parent = computer.File(pathParent)
+    if not parent then cor.exit_err("touch: " + pathParent + " not found")
+    if not parent.has_permission("w") then cor.exit_err("touch: permission denied")
+    arrayPath = pathFile.split("/")
+    output = computer.touch(parent.path, arrayPath[arrayPath.len - 1])
+    if output and output != 1 then print(output)
+    bat.run
+end function
+sys.useradd={"name":"useradd","usage":"[new username]","req":"XXX"}
+sys.useradd.run=function(params)//TODO needs testing
+    if params.len!=1 then sys.man(["useradd"])
+    inputMsg = "Setting password for user " + params[0] +".\nNew password: "
+    inputPass = user_input(inputMsg, bio.demo)
+    computer=cor.req("computer",bat.cur_obj)
+    output = computer.create_user(params[0], inputPass)
+    if output == true then ;print("User created OK");bat.run;end if
+    if output then 
+        print(output)
+        print("useadd: the user could not be created.").color("##ffff00")
+        bat.run
+    end if
+end function
+sys.userdel={"name":"userdel","usage":"userdel [opt:-r] [username]"+char(10)+"Use paremeter -r to delete user files too."+char(10)+"Example: userdel -r kuro","req":"XXX"}
+sys.userdel.run=function(params)
+    if params.len==0 then sys.man.run(["userdel"])
+    delete = 0
+    if params[0] == "-r" then
+        delete = 1
+        params.pull
+    end if
+    computer=cor.req("computer",bat.cur_obj)
+    output = computer.delete_user(params[0], delete)
+    if output == true then ;print("user " + params[0] + " deleted.");bat.run;end if
+    if output then ;print("userdel: user not deleted.").color("#ffff00");char(10);print(output);bat.run;end if
+end function
+sys.whoami={"name":"whoami","usage":"","req":"XXX"}
+sys.whoami.run=function(params)
+    print(cor.user(bat.cur_obj))
+end function
+sys.whois={"name":"whois","usage":"[public IP address]","req":"XXX"}
+sys.whois.run=function(params)
+    if params.len != 1 and ["shell","computer"].indexOf(typeof(bat.cur_obj))!=null then
+        print whois(cor.req("computer",bat.cur_obj).public_ip)
+    else if params[0] == "-h" or params[0] == "--help" then
+	    sys.man.run(["whois"])
+    else
+        address = params[0]
+        print(whois(address))
+    end if
+end function
+
+sys.sniffer={"name":"sniffer","desc":"Watches for incoming connections","type":"live","usage":"XXX","req":"computer"}
+sys.sniffer.run=function(params)//TODO test
+    computer=bio.master_shell.host_computer
+    print "Listening for Incoming Connections... On> "+bat.cur_obj.host_computer.local_ip
+    cus.local_libs(bat.cur_obj)
+    print "Listening for Incoming Connections... On> "+bat.cur_obj.host_computer.local_ip
+    computer.create_folder("/root","cps")
+    sniff_temp=computer.File("/root/cps/s")
+    if not sniff_temp then computer.touch("/root/cps","s")
+    sniff_temp=computer.File("/root/cps/s")
+    while cor.watch_file(sniff_temp.path)==1
+        if bio["local_meta"].sniffer!=null then 
+            print bio["local_meta"].sniffer
+        else
+            if cor.watch_file(sniff_temp.path)==0 then bat.run
+        end if
+    end while
+    bat.run
+end function
+sys.md5={"name":"md5","desc":"check if plain text password is in game database","type":"live","usage":"plain_password","req":"file"}
+sys.md5.run=function(params)//TODO test
+    print params[0]+":"+md5(params[0])
+    if bio.crypto.decipher(md5(params[0]))!=null then 
+        print "Found in Game DB"
+        bat.run
+    else
+        print "Not Found In Game DB"
+        if user_input("Push "+params[0]+" Into Game DB? y/n",bio.demo)=="y" and active_user=="root" then
+            get_shell.host_computer.create_user("subspace",params[0])
+            get_shell.host_computer.delete_user("subspace",1)
+        end if
+    end if
+end function
+sys.ping_server={"name":"ping_server","desc":"Test Server Connection 6sec is normal","type":"live","usage":"XXX","req":"file"}
+sys.ping_server.run=function(params)
+    clear_screen
+    print "Starting Server Test"
+    cor.stopwatch("start")
+    for num in range(1000000)
+        isPingable=get_shell.ping("1.1.1.1")
+    end for
+    cor.stopwatch("end"," To ping 1.1.1.1 1,000,000 times")
+end function
+sys.ips={"name":"ips","desc":"Internel Process Handler","type":"live","usage":"XXX","req":"file"}
+sys.ips.run=function(params)
+    computer=cor.req("computer",bio.master_shell)
+    tasks={"h":"htop","s":"sniffer","w":"watchdog","c":"clock"}
+    active={}
+    for file in computer.File("/root/cps").get_files
+        active[file.name]=file
+    end for
+    if active.len==0 then
+        print "Nothing is Running!"
+        bat.run
+    else
+        options=[]
+        for a in active.indexes
+            options.push(tasks[a])
+        end for
+        task=active[tasks.indexOf(cor.menu(options))]
+        print task
+        print typeof(task)
+        if typeof(task)=="file" then task.delete
+    end if
+end function
+sys.scp={"name":"scp","desc":"Download and Upload files from/to remote/local system","type":"live","usage":"-d[download] -u[upload]","req":"shell"}
+sys.scp.run=function(params)
+    shell=cor.req("shell",bat.cur_obj)
+    local_shell=get_shell
+    remote_shell=shell
+    if params.len==0 then params.push("-d")
+    if params[0]=="-d" then
+        remote_shell.scp(user_input("File to Download:",bio.demo),"/home/"+active_user+"/Downloads",local_shell)
+    else
+        print "ftp:Upload has not been added yet!"
+        bat.run
+    end if
+end function
+sys.run={"name":"run","desc":"Run Scripts","type":"live","usage":"program_name","req":"shell"}
+sys.run.run=function(params)
+    if params.len!=1 then sys.man(["run"])
+    shell=cor.req("shell",bat.cur_obj)
+    if not shell.host_computer.File(params[0]) then
+        pathFile=params[0]
+        if typeof(shell.host_computer.File(params[0]))!="file" then
+            temp=cor.find(shell.host_computer.File("/"))
+            matches=[]
+            for file in temp.files
+                if file.name.lower==pathFile.lower and file.is_binary and not file.is_folder then
+                    matches.push(file)
+                end if 
+            end for
+            file=cor.check_match(matches)
+            if file and file.has_permission("x") then shell.launch(file.path)
+        else
+            if file and file.has_permission("x") and file.is_binary==1 and file.is_folder==0 then shell.launch(shell.host_computer.File(params[0]))
+        end if
+    else
+        file=shell.host_computer.File(params[0])
+        if file and file.has_permission("x") and file.is_binary==1 and file.is_folder==0 then shell.launch(get_abs_path(params[0]))
+    end if
+end function
+sys.decipher={"name":"decipher","desc":"Decrypts the given m5d password","type":"live","usage":"password","req":"file"}
+sys.decipher.run=function(params)//TODO test
+    if params.len!=1 then sys.man.run(["decipher"])
+    print cus.programs.rainbow.run(["hash",0,0,params[0],1])
+end function
+sys.tbe={"name":"tbe","desc":"Terminal Based Text Editor","type":"live","usage":"file_path","req":"computer"}
+sys.tbe.run=function(params)
+    if params.len!=1 then sys.man.run(["tbe"])
+    computer=cor.req("computer",bat.cur_obj)
+    document=computer.File(params[0])
+    if not document then document=computer.File(get_abs_path(params[0]))
+    if not document then cor.exit_err("tbe: Unable to locate "+params[0])
+    infomation=function()
+        line_count=document.get_content.split(char(10)).len
+        character_count=document.get_content.values.len
+        print "Document Path: "+document.path
+        print "Line Count: "+line_count
+        print "Character Count With Spaces: "+character_count
+    end function
+    display=function(lines,current_line)
+        n=1
+        for line in lines
+            if n==current_line then
+                print "<u>"+n+"<b>:</b><color=white> "+line
+            else
+                print "<color=yellow>"+n+"<b>:</b><color=white> "+line
+            end if
+            n=n+1
+        end for
+    end function
+    write=function
+        current_line=1
+        lines=document.get_content.split(char(10))
+        while true
+            line=lines[current_line-1]
+            clear_screen
+            display(lines,current_line)
+            print "{"+current_line+"</>"+document.get_content.split(char(10)).len+"}"
+            if document.get_content.split(char(10)).len>=11 then print "<u>"+current_line+"<b>"+":</b><color=white>"+lines[current_line-1]
+            prompt=user_input("#",0,1)
+            if prompt=="LeftControl" then prompt="^"+user_input("^",0,1)
+            if prompt=="DownArrow" then
+                if current_line!=document.get_content.split(char(10)).len then current_line=current_line+1
+            else if prompt=="UpArrow" then
+                if current_line!=1 then current_line=current_line-1
+            else if prompt=="" then
+                lines[current_line-1]=user_input(">")
+            else if prompt=="^o" then
+                if user_input("Write Changes To File? y/n").lower=="n" then
+                    if user_input("Undo ALL Changes? y/n ")=="y" then lines=file.get_content.split(char(10))
+                else
+                    document.set_content("")
+                    for line in lines
+                        if document.get_content=="" then
+                            document.set_content(line)
+                        else
+                            document.set_content(document.get_content+char(10)+line)
+                        end if
+                    end for
+                    clear_screen
+                    print "Saved Changes To: "+document.path
+                    wait 1
+                end if
+            else if prompt=="^x" then
+                bat.run
+            else if prompt=="^/" then
+                jump_to=user_input("Enter line number:").val
+                if jump_to>document.get_content.split(char(10)).len then
+                    wait 0.1
+                else if jump_to==0 then
+                    current_line=1
+                else
+                    current_line=jump_to
+                end if
+            else if prompt=="h" then
+            else
+            end if
+            wait 0.1
+        end while
+    end function
+    write
+end function
