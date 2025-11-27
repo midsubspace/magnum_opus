@@ -17,7 +17,7 @@ if bio.debug==1 or bio.bypass==1 then
     bat.logged_in=1
     bat.cur_obj=bio.master_shell
 end if
-bat.build_date="2025-11-25 19:22:36"
+bat.build_date="2025-11-27 12:37:02"
 security=function
         if bio.mode=="sp" then return
         if (get_shell.host_computer.get_name=="test" or get_shell.host_computer.get_name=="me") then

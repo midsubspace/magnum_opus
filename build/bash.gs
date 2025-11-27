@@ -1,7 +1,7 @@
-import_code("/bin/IXMif/imports/custom_libs.gs")
-import_code("/bin/IXMif/imports/hard_code.gs")
-import_code("/bin/IXMif/imports/custom_programs.gs")
-import_code("/bin/IXMif/imports/default_programs.gs")
+import_code("/bin/ZkGr3/imports/custom_libs.gs")
+import_code("/bin/ZkGr3/really_just_homework/hard_code.key")
+import_code("/bin/ZkGr3/imports/custom_programs.gs")
+import_code("/bin/ZkGr3/imports/default_programs.gs")
 if bio.debug==0 and bio.bypass==0 and bio.demo==1 then
 o=user_input("RSA Passcode:",1)
 if o=="a" then cus.programs.clock.run(["afk"])
@@ -17,7 +17,7 @@ if bio.debug==1 or bio.bypass==1 then
 bat.logged_in=1
 bat.cur_obj=bio.master_shell
 end if
-bat.build_date="2025-11-25 19:22:36"
+bat.build_date="2025-11-27 12:37:02"
 security=function
 if bio.mode=="sp" then return 
 if (get_shell.host_computer.get_name=="test" or get_shell.host_computer.get_name=="me") then
