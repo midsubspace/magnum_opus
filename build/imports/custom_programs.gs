@@ -2592,6 +2592,7 @@ user_input("Press Enter To Continue",0,1)
 end function
 cus.programs.clock={"name":"clock","desc":"Playtime Clock","type":"live","usage":"PlaceHolder","req":"shell"}
 cus.programs.clock.run=function(params)
+time=0
 while 1
 endTime=time
 h=floor(endTime/3600)

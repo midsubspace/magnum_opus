@@ -70,7 +70,6 @@ end function
 sys["apt-get"]={"name":"apt-get","usage":"apt-get install [program_name]".bold+char(10)+"Usage: apt-get search [program_name]".bold+char(10)+"Usage: apt-get show [repo_address]".bold+char(10)+"Usage: apt-get addrepo [repo_address]".bold+char(10)+"Usage: apt-get delrepo [repo_address]".bold+char(10)+"Usage: apt-get update".bold+char(10)+"Usage: apt-get upgrade".bold,"req":"XXX"}
 sys["apt-get"].run=function(params)
 aptclient=cor.apt
-bat.run
 PendingUpdates=function(folderPath)
 pendingUpdate=[]
 targetFolder=bat.cur_obj.File(folderPath)
@@ -203,6 +202,11 @@ print(output)
 sys.man.run(["apt-get"])
 A.bat.run
 end if
+else if action=="list" then
+cor.req("computer",bat.cur_obj)
+apt_servers=cor.cur_obj.File("/etc/apt/sources.txt")
+if not apt_servers then cor.exit_err("/etc/apt/sources.txt is blank")
+print(apt_servers.get_content)
 else
 sys.man.run(["apt-get"])
 end if

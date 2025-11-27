@@ -39,6 +39,7 @@ if typeof(apt)!="aptclientLib" then
 print("Aptclient.so Not Found".color("#ffff00"))
 bat.run
 else
+print("Found Aptclient.so")
 return (apt)
 end if
 end function

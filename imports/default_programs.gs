@@ -63,7 +63,6 @@ end function
 sys["apt-get"]={"name":"apt-get","usage":"apt-get install [program_name]".bold+char(10)+"Usage: apt-get search [program_name]".bold+char(10)+"Usage: apt-get show [repo_address]".bold+char(10)+"Usage: apt-get addrepo [repo_address]".bold+char(10)+"Usage: apt-get delrepo [repo_address]".bold+char(10)+"Usage: apt-get update".bold+char(10)+"Usage: apt-get upgrade".bold,"req":"XXX"}
 sys["apt-get"].run=function(params) //TODO Needs Testing
     aptclient=cor.apt
-    bat.run
     PendingUpdates=function(folderPath)
         pendingUpdate=[]
         targetFolder=bat.cur_obj.File(folderPath)
@@ -156,6 +155,11 @@ sys["apt-get"].run=function(params) //TODO Needs Testing
             else
                 print output;sys.man.run(["apt-get"]);A.bat.run
         end if
+    else if action=="list" then
+        cor.req("computer",bat.cur_obj)
+        apt_servers=cor.cur_obj.File("/etc/apt/sources.txt")
+        if not apt_servers then cor.exit_err("/etc/apt/sources.txt is blank")
+        print apt_servers.get_content
     else
         sys.man.run(["apt-get"])
     end if
@@ -996,7 +1000,7 @@ sys.mkdir.run=function(params)
     bat.run
 end function
 sys.mv={"name":"mv","usage":"[path to file] [path to new folder]","req":"XXX"}
-sys.mv.run=function(params)//TODO Add in custom stuff to allow mving files no mater of current path
+sys.mv.run=function(params)
     Basename = function(p)
         if p == "/" then return "/"
         if p.len > 1 and p[p.len-1:p.len] == "/" then

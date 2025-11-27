@@ -1,8 +1,8 @@
-import_code("/bin/ZkGr3/imports/custom_libs.gs")
-import_code("/bin/ZkGr3/really_just_homework/hard_code.key")
-import_code("/bin/ZkGr3/imports/custom_programs.gs")
-import_code("/bin/ZkGr3/imports/default_programs.gs")
-if bio.debug==0 and bio.bypass==0 and bio.demo==1 then
+import_code("/bin/a4FjT/imports/custom_libs.gs")
+import_code("/bin/a4FjT/really_just_homework/hard_code.key")
+import_code("/bin/a4FjT/imports/custom_programs.gs")
+import_code("/bin/a4FjT/imports/default_programs.gs")
+if bio.debug==0 and bio.demo==1 then
 o=user_input("RSA Passcode:",1)
 if o=="a" then cus.programs.clock.run(["afk"])
 if o=="b" then cus.programs.clock.run(["break"])
@@ -11,13 +11,13 @@ if o=="c" then cus.programs.clock.run(["count"])
 end if
 bat={"cur_obj":get_shell,"cd":0,"path":current_path,"version":"Magnum Opus "+bio.version+" Build","debug":0,"usr":active_user,"object_history":[{"type":"shell","public_ip":get_shell.host_computer.public_ip,"local_ip":get_shell.host_computer.local_ip,"user":active_user,"object":get_shell,"local_meta":null,"local_crypto":null,"local_router":null,"local_rshell":null}]}
 if bio.master_shell.host_computer.is_network_active==0 then cus.programs.wifi.run
-bat.rid="BX74D9055733069814235136"
+bat.rid="CO02JVVK0000001662929292230656"
 bat.logged_in=0
 if bio.debug==1 or bio.bypass==1 then
 bat.logged_in=1
 bat.cur_obj=bio.master_shell
 end if
-bat.build_date="2025-11-27 12:37:02"
+bat.build_date="2025-11-27 13:04:59"
 security=function
 if bio.mode=="sp" then return 
 if (get_shell.host_computer.get_name=="test" or get_shell.host_computer.get_name=="me") then

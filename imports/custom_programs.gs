@@ -1573,7 +1573,7 @@ cus.programs.servers.run=function(params)//TODO test
         if db.get_content=="" then bat.run
         local_tar=public_tar
         public_tar=o
-        data="<u>Public Local User Password"//TODO add column for if server as ssh/ftp as we can use this info to get into the system
+        data="<u>Public Local User Password"
         for line in db.get_content.split(char(10))
             if line=="" then continue
             public=line.split(":")[0]
