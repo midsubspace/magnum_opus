@@ -9,6 +9,7 @@ cus.payloads("create",shell)
 if cus.dropzone==null then cor.exit_err("local_libs: Dropzone is null")
 bat_file=cus.bat_file
 if bio.debug==1 then print(bat_file.path+char(10)+typeof(bat_file))
+if typeof(bio.hardware_server)!="shell" then return 
 s=bio.hardware_server.scp("/lib/metaxploit.so",cus.dropzone.path,shell)
 s=bio.hardware_server.scp("/lib/crypto.so",cus.dropzone.path,shell)
 sr=bat_file.set_content("crypto=include_lib("""+cus.dropzone.path+"/crypto.so"")"+char(10)+"meta=include_lib("""+cus.dropzone.path+"/metaxploit.so"")"+char(10)+"get_custom_object[""local_meta""]=meta"+char(10)+"get_custom_object[""local_crypto""]=crypto"+char(10)+"get_custom_object[""local_switch""]=get_switch"+char(10)+"get_custom_object[""local_router""]=get_router"+char(10)+"get_custom_object[""local_rshell""]=include_lib(""/lib/librshell.so"")"+char(10)+"exit")
