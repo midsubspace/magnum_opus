@@ -1,8 +1,0 @@
-really_just_homework
-build
-.megaignore
-build/bash.gs
-build/installer0.src
-build/installer1.src
-build/imports/custom_programs.gs
-build/really_just_homework/hard_code.key
