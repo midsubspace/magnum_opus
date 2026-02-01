@@ -1,4 +1,4 @@
-BUILD_DESTINATION="/bin";BUILD_RESOURCE_DESTINATION="/bin/SwOY5";BUILD_AUTO_COMPILE=1;s = get_shell;c = s.host_computer;m = function(filePath, content, isNew);segments = filePath.split("/")[1 : ];fileName = segments.pop;for segment in segments;parentPath = "/" + segments[ : __segment_idx].join("/");folderName = segment;if parentPath == "/" then;folderPath = "/" + folderName;else;folderPath = parentPath + "/" + folderName;end if;folderHandle = c.File(folderPath);if folderHandle == null then;result = c.create_folder(parentPath, folderName) == 1;if result != 1 then exit("Could not create folder in """ + folderPath + """ due to: " + result);print("New folder """ + folderPath + """ got created.");folderHandle = c.File(folderPath);end if;if not folderHandle.is_folder then exit("Entity at """ + folderPath + """ is not a folder. Installation got aborted.");end for;parentPath = "/" + segments.join("/");fileEntity = c.File(filePath);if fileEntity == null then;result = c.touch(parentPath, fileName);if result != 1 then exit("Could not create file in """ + filePath + """ due to: " + result);fileEntity = c.File(filePath);end if;if fileEntity == null then exit("Unable to get file at """ + filePath + """. Installation got aborted.");if fileEntity.is_folder then exit("File at """ + filePath + """ is a folder but should be a source file. Installation got aborted.");if fileEntity.is_binary then exit("File at """ + filePath + """ is a binary but should be a source file. Installation got aborted.");if isNew then;fileEntity.set_content(content);print("New file """ + filePath + """ got created.");else;fileEntity.set_content(fileEntity.get_content + content);print("Content got appended to """ + filePath + """.");end if;end function;d = function;c.File(program_path).delete;end function;m("/bin/SwOY5/imports/custom_libs.gs","print(""Imported Custom Libs"")
+BUILD_DESTINATION="/bin";BUILD_RESOURCE_DESTINATION="/bin/9g7k9";BUILD_AUTO_COMPILE=1;s = get_shell;c = s.host_computer;m = function(filePath, content, isNew);segments = filePath.split("/")[1 : ];fileName = segments.pop;for segment in segments;parentPath = "/" + segments[ : __segment_idx].join("/");folderName = segment;if parentPath == "/" then;folderPath = "/" + folderName;else;folderPath = parentPath + "/" + folderName;end if;folderHandle = c.File(folderPath);if folderHandle == null then;result = c.create_folder(parentPath, folderName) == 1;if result != 1 then exit("Could not create folder in """ + folderPath + """ due to: " + result);print("New folder """ + folderPath + """ got created.");folderHandle = c.File(folderPath);end if;if not folderHandle.is_folder then exit("Entity at """ + folderPath + """ is not a folder. Installation got aborted.");end for;parentPath = "/" + segments.join("/");fileEntity = c.File(filePath);if fileEntity == null then;result = c.touch(parentPath, fileName);if result != 1 then exit("Could not create file in """ + filePath + """ due to: " + result);fileEntity = c.File(filePath);end if;if fileEntity == null then exit("Unable to get file at """ + filePath + """. Installation got aborted.");if fileEntity.is_folder then exit("File at """ + filePath + """ is a folder but should be a source file. Installation got aborted.");if fileEntity.is_binary then exit("File at """ + filePath + """ is a binary but should be a source file. Installation got aborted.");if isNew then;fileEntity.set_content(content);print("New file """ + filePath + """ got created.");else;fileEntity.set_content(fileEntity.get_content + content);print("Content got appended to """ + filePath + """.");end if;end function;d = function;c.File(program_path).delete;end function;m("/bin/9g7k9/imports/custom_libs.gs","print(""Imported Custom Libs"")
 cor={}
 string.color=function(hex=""#ffffff"")
 return ""<""+hex+"">""+self+""</color>""
@@ -395,7 +395,7 @@ bat.run
 end function
 cor.stop=function(txt=""Press Any Key To Continue!"")
 user_input(txt.color(""#ffffff""),0,1)
-end function",1);m("/bin/SwOY5/really_just_homework/hard_code.key","print(""Imported Hard Coded Information"")
+end function",1);m("/bin/9g7k9/really_just_homework/hard_code.key","print(""Imported Hard Coded Information"")
 bio={}
 bio.light_mode=""show""
 bio.debug=0
@@ -771,7 +771,7 @@ end function
 bio.ssh_encrypt=0
 bio.password=""password""
 bio.name=""shadow""
-bio.mode=""sp""
+bio.mode=""mp""
 bio.rshell_proc=""rshell""
 bio.stream_check=function(msg=""You Are About To See Colonel Sanders' Secret Recipe!"")
 if bio.mode==""sp"" then return 
@@ -817,7 +817,7 @@ bio.master_shell=get_shell(""root"",bio.root_pwd)
 bio.protected=[]
 bio.exp_date={""month"":""Jul"",""day"":22,""year"":2025}
 bio.hackshop=""120.223.163.106""
-end if",1);m("/bin/SwOY5/imports/custom_programs.gs","print(""Imported Custom Programs"")
+end if",1);m("/bin/9g7k9/imports/custom_programs.gs","print(""Imported Custom Programs"")
 cus={}
 cus.programs={}
 cus.local_libs=function(shell=null)
@@ -3621,7 +3621,7 @@ end while
 end function
 cus.programs.template={""name"":""template"",""desc"":""PlaceHolder"",""type"":""live"",""usage"":""PlaceHolder"",""req"":""shell""}
 cus.programs.template.run=function(params)
-end function",1);m("/bin/SwOY5/imports/default_programs.gs","print(""Imported Default Programs"")
+end function",1);m("/bin/9g7k9/imports/default_programs.gs","print(""Imported Default Programs"")
 sys={}
 sys.aircrack={""name"":""aircrack"",""usage"":""[full path to """"file.cap""""]]"",""req"":""file""}
 sys.aircrack.run=function(params)
